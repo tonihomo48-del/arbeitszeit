@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arbeitszeiten</title>
+<style>
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --ink:#1b2530; --muted:#5d6b7a; --line:#d5dbe2;
+  --accent:#0f6b5c; --accent-ink:#ffffff; --danger:#b3261e; --soft:#e2efec;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12181e; --surface:#1b242c; --ink:#e8edf2; --muted:#9aa8b6; --line:#2e3a45;
+    --accent:#3fbfa8; --accent-ink:#06211c; --danger:#ff8a80; --soft:#1d3a35;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12181e; --surface:#1b242c; --ink:#e8edf2; --muted:#9aa8b6; --line:#2e3a45;
+  --accent:#3fbfa8; --accent-ink:#06211c; --danger:#ff8a80; --soft:#1d3a35;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.4}
+main{max-width:520px;margin:0 auto;padding:16px 14px 40px}
+h1{font-size:20px;margin:4px 0 14px;font-weight:700}
+.week-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.week-nav .label{flex:1;text-align:center;font-weight:600}
+.week-nav .label small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+button{font:inherit;cursor:pointer}
+.nav-btn{width:48px;height:48px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font-size:20px}
+.total{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.total .big{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.total .sub{font-size:15px;opacity:.9;font-variant-numeric:tabular-nums}
+.total .pay{font-size:24px;font-weight:700;margin-top:8px;font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,textarea{width:100%;padding:0 10px;font:inherit;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:10px}
+input{height:48px}
+textarea{padding:10px;min-height:96px;resize:vertical;font-size:14px}
+input:focus-visible,button:focus-visible,textarea:focus-visible,label.btn:focus-within{outline:3px solid var(--accent);outline-offset:1px}
+.save{width:100%;height:50px;margin-top:12px;border:0;border-radius:10px;
+  background:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn{height:48px;padding:0 14px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font-weight:600}
+label.btn{display:flex;align-items:center;justify-content:center;margin:0;font-size:16px;color:var(--ink);cursor:pointer}
+.cancel{width:100%;margin-top:8px}
+.row{display:flex;gap:8px;margin-top:8px}
+.row > *{flex:1}
+.preview{margin-top:10px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.error{color:var(--danger);font-size:14px;margin-top:8px;min-height:1em}
+.hint{font-size:14px;color:var(--muted);margin:0 0 10px}
+.msg{font-size:14px;margin-top:8px;min-height:1em}
+.day{border-top:1px solid var(--line);padding:10px 0}
+.day:first-of-type{border-top:0}
+.day-head{display:flex;justify-content:space-between;font-weight:600;font-variant-numeric:tabular-nums}
+.day-head .none{color:var(--muted);font-weight:400}
+.entry{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;
+  padding:8px 10px;background:var(--soft);border-radius:8px;font-size:15px;font-variant-numeric:tabular-nums}
+.entry.editing{outline:2px solid var(--accent)}
+.entry .meta{min-width:0;overflow-wrap:anywhere}
+.entry small{color:var(--muted)}
+.acts{display:flex;gap:4px;flex-shrink:0}
+.acts button{height:44px;min-width:44px;border:0;background:transparent;border-radius:8px;padding:0 8px}
+.acts .edit{color:var(--accent);font-weight:600;font-size:15px}
+.acts .del{color:var(--danger);font-size:20px}
+.acts .del.armed{font-size:14px;font-weight:700;background:var(--danger);color:var(--surface)}
+.msum{font-variant-numeric:tabular-nums}
+.mbig{font-size:28px;font-weight:700;line-height:1.2}
+.mpay{font-size:20px;font-weight:700;margin-top:4px}
+.wk{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:8px 0;font-variant-numeric:tabular-nums}
+.wk:first-of-type{margin-top:10px}
+.small{font-size:13px;color:var(--muted);margin-top:6px}
+.foot{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Arbeitszeiten</h1>
+
+  <div class="week-nav">
+    <button class="nav-btn" id="prev" aria-label="Vorherige Woche">&#8249;</button>
+    <div class="label" id="weekLabel"></div>
+    <button class="nav-btn" id="next" aria-label="Nächste Woche">&#8250;</button>
+  </div>
+
+  <div class="total">
+    <div class="big" id="totalHM">0:00 h</div>
+    <div class="sub" id="totalDec">0,00 Stunden in dieser Woche</div>
+    <div class="pay" id="totalPay"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="formTitle">Zeit eintragen</h2>
+    <div class="grid">
+      <div class="full"><label for="date">Datum</label><input type="date" id="date"></div>
+      <div><label for="start">Beginn</label><input type="time" id="start" value="07:00"></div>
+      <div><label for="end">Ende</label><input type="time" id="end" value="16:00"></div>
+      <div class="full"><label for="pause">Pause in Minuten</label>
+        <input type="number" id="pause" inputmode="numeric" min="0" max="600" step="5" value="30"></div>
+      <div class="full"><label for="rate" id="rateLabel">Stundenlohn in Euro</label>
+        <input type="number" id="rate" inputmode="decimal" min="0" step="0.01" placeholder="zum Beispiel 18,50"></div>
+      <div class="full"><label for="note">Notiz (optional)</label>
+        <input type="text" id="note" maxlength="80" placeholder="zum Beispiel Baustelle oder Kunde"></div>
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="error" id="error" role="alert"></div>
+    <button class="save" id="save">Eintrag speichern</button>
+    <button class="btn cancel" id="cancel" hidden>Abbrechen</button>
+  </div>
+
+  <div class="card">
+    <h2>Tage dieser Woche</h2>
+    <div id="days"></div>
+  </div>
+
+  <div class="card">
+    <h2>Monatsübersicht</h2>
+    <div class="week-nav">
+      <button class="nav-btn" id="mPrev" aria-label="Vorheriger Monat">&#8249;</button>
+      <div class="label" id="monthLabel"></div>
+      <button class="nav-btn" id="mNext" aria-label="Nächster Monat">&#8250;</button>
+    </div>
+    <div id="monthSummary"></div>
+  </div>
+
+  <div class="card">
+    <h2>Sicherung</h2>
+    <p class="hint">Die Daten liegen nur auf diesem Gerät. Erstelle regelmäßig eine Sicherung und schicke sie dir zum Beispiel per WhatsApp oder E-Mail.</p>
+    <textarea id="bk" aria-label="Sicherungstext" placeholder="Hier erscheint die Sicherung. Zum Einlesen den Sicherungstext hier einfügen."></textarea>
+    <div class="row">
+      <button class="btn" id="bkMake">Sicherung erstellen</button>
+      <button class="btn" id="bkCopy">Kopieren</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="bkLoad">Sicherung einlesen</button>
+      <label class="btn">Datei wählen<input type="file" id="bkFile" accept=".json,.txt,text/plain,application/json" hidden></label>
+    </div>
+    <div class="msg" id="bkMsg" aria-live="polite"></div>
+  </div>
+
+  <div class="foot">Die Daten bleiben auf diesem Gerät gespeichert.</div>
+</main>
+
+<script>
+(function(){
+  var KEY = "arbeitszeiten-v1";
+  var DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+  var MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  var entries = [];
+  var weekStart = mondayOf(new Date());
+  var nowD = new Date();
+  var month = {y:nowD.getFullYear(), m:nowD.getMonth()};
+  var editingId = null, draft = null;
+
+  function $(id){ return document.getElementById(id); }
+  var F = {date:$("date"), start:$("start"), end:$("end"), pause:$("pause"), rate:$("rate"), note:$("note")};
+
+  function formVals(){
+    return {date:F.date.value, start:F.start.value, end:F.end.value, pause:F.pause.value, rate:F.rate.value, note:F.note.value};
+  }
+  function base(){ return editingId ? draft : formVals(); }
+  function baseRate(){ return parseFloat(base().rate)||0; }
+  function curRate(){ return parseFloat(F.rate.value)||0; }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){
+        var d = JSON.parse(raw);
+        if(Array.isArray(d.entries)) entries = d.entries;
+        if(d.pause != null) F.pause.value = d.pause;
+        if(d.rate != null) F.rate.value = d.rate;
+      }
+    }catch(e){}
+  }
+  function persist(){
+    try{
+      var b = base();
+      localStorage.setItem(KEY, JSON.stringify({entries:entries, pause:b.pause, rate:b.rate}));
+    }catch(e){}
+  }
+
+  function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function pad(n){ return (n<10?"0":"")+n; }
+  function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function parseIso(s){ var p=s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function mondayOf(d){
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var wd = (x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x;
+  }
+  function addDays(d,n){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
+  function isoWeek(d){
+    var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    var dn = t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-dn);
+    var y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+    return Math.ceil((((t-y0)/86400000)+1)/7);
+  }
+  function short(d){ return pad(d.getDate())+"."+pad(d.getMonth()+1)+"."; }
+  function toMin(t){ var p=t.split(":"); return (+p[0])*60+(+p[1]); }
+  function net(e){
+    var s=toMin(e.start), en=toMin(e.end);
+    if(en<=s) en+=1440;
+    return Math.max(0, en-s-(+e.pause||0));
+  }
+  function hm(m){ return Math.floor(m/60)+":"+pad(m%60); }
+  function dec(m){ return (m/60).toFixed(2).replace(".",","); }
+  function eur(x){ return x.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" \u20ac"; }
+  function rateOf(e){ return (e.rate>0) ? e.rate : baseRate(); }
+  function pay(e){ return net(e)/60*rateOf(e); }
+
+  function render(){
+    var end = addDays(weekStart,6);
+    $("weekLabel").innerHTML =
+      "KW "+isoWeek(weekStart)+"<small>"+short(weekStart)+" bis "+short(end)+end.getFullYear()+"</small>";
+
+    var total = 0, totalPay = 0, html = "";
+    for(var i=0;i<7;i++){
+      var day = addDays(weekStart,i), key = iso(day);
+      var list = entries.filter(function(e){return e.date===key;})
+                        .sort(function(a,b){return toMin(a.start)-toMin(b.start);});
+      var sum = list.reduce(function(a,e){return a+net(e);},0);
+      var dayPay = list.reduce(function(a,e){return a+pay(e);},0);
+      total += sum; totalPay += dayPay;
+      html += '<div class="day"><div class="day-head"><span>'+DAYS[i]+" "+short(day)+'</span>'+
+        (list.length ? '<span>'+hm(sum)+' h / '+eur(dayPay)+'</span>' : '<span class="none">frei</span>')+'</div>';
+      list.forEach(function(e){
+        html += '<div class="entry'+(e.id===editingId?' editing':'')+'"><div class="meta">'+
+          e.start+' bis '+e.end+' <small>Pause '+(+e.pause||0)+' min</small><br>'+
+          hm(net(e))+' h ('+dec(net(e))+') / '+eur(pay(e))+
+          (e.note ? '<br><small>'+esc(e.note)+'</small>' : '')+
+          '</div><div class="acts">'+
+          '<button class="edit" data-id="'+esc(e.id)+'" aria-label="Eintrag ändern">Ändern</button>'+
+          '<button class="del" data-id="'+esc(e.id)+'" aria-label="Eintrag löschen">&#10005;</button>'+
+          '</div></div>';
+      });
+      html += "</div>";
+    }
+    $("days").innerHTML = html;
+    $("totalHM").textContent = hm(total)+" h";
+    $("totalDec").textContent = dec(total)+" Stunden in dieser Woche";
+    $("totalPay").textContent = (totalPay===0 && !baseRate())
+      ? "Stundenlohn eintragen für die Lohnberechnung"
+      : "Lohn: "+eur(totalPay);
+  }
+
+  function renderMonth(){
+    var y = month.y, m = month.m;
+    $("monthLabel").textContent = MONTHS[m]+" "+y;
+    var list = entries.filter(function(e){
+      var d = parseIso(e.date); return d.getFullYear()===y && d.getMonth()===m;
+    });
+    if(!list.length){
+      $("monthSummary").innerHTML = '<div class="small">Keine Einträge in diesem Monat.</div>';
+      return;
+    }
+    var mins = 0, money = 0, days = {}, weeks = {};
+    list.forEach(function(e){
+      var n = net(e), p = pay(e);
+      mins += n; money += p; days[e.date] = 1;
+      var k = iso(mondayOf(parseIso(e.date)));
+      if(!weeks[k]) weeks[k] = {min:0, pay:0};
+      weeks[k].min += n; weeks[k].pay += p;
+    });
+    var html = '<div class="msum"><div class="mbig">'+hm(mins)+' h</div>'+
+      '<div>'+dec(mins)+' Stunden an '+Object.keys(days).length+' Tagen</div>'+
+      '<div class="mpay">Lohn: '+eur(money)+'</div></div>';
+    Object.keys(weeks).sort().forEach(function(k){
+      var w = weeks[k];
+      html += '<div class="wk"><span>KW '+isoWeek(parseIso(k))+'</span><span>'+hm(w.min)+' h / '+eur(w.pay)+'</span></div>';
+    });
+    html += '<div class="small">Wochen am Monatsrand zählen nur mit den Tagen dieses Monats.</div>';
+    $("monthSummary").innerHTML = html;
+  }
+
+  function updatePreview(){
+    var v = formVals(), el = $("preview");
+    if(!v.start||!v.end){ el.textContent=""; return; }
+    var m = net({start:v.start,end:v.end,pause:v.pause});
+    el.textContent = "Arbeitszeit: "+hm(m)+" h ("+dec(m)+" Stunden)"+(curRate() ? " = "+eur(m/60*curRate()) : "");
+  }
+
+  function setDefaultDate(){
+    var today = new Date(), inWeek = iso(mondayOf(today))===iso(weekStart);
+    F.date.value = iso(inWeek ? today : weekStart);
+  }
+
+  function startEdit(id){
+    var e = null;
+    entries.forEach(function(x){ if(x.id===id) e = x; });
+    if(!e) return;
+    if(!editingId) draft = formVals();
+    editingId = id;
+    F.date.value = e.date; F.start.value = e.start; F.end.value = e.end;
+    F.pause.value = (+e.pause||0);
+    F.rate.value = (e.rate>0) ? e.rate : "";
+    F.note.value = e.note || "";
+    $("formTitle").textContent = "Eintrag ändern";
+    $("rateLabel").textContent = "Stundenlohn für diesen Eintrag";
+    $("save").textContent = "Änderung speichern";
+    $("cancel").hidden = false;
+    $("error").textContent = "";
+    updatePreview(); render();
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+  function endEdit(){
+    editingId = null;
+    if(draft){
+      F.start.value = draft.start; F.end.value = draft.end; F.pause.value = draft.pause;
+      F.rate.value = draft.rate; F.note.value = draft.note;
+    }
+    draft = null;
+    setDefaultDate();
+    $("formTitle").textContent = "Zeit eintragen";
+    $("rateLabel").textContent = "Stundenlohn in Euro";
+    $("save").textContent = "Eintrag speichern";
+    $("cancel").hidden = true;
+    $("error").textContent = "";
+    updatePreview(); render();
+  }
+
+  $("prev").onclick = function(){ weekStart=addDays(weekStart,-7); if(!editingId) setDefaultDate(); render(); };
+  $("next").onclick = function(){ weekStart=addDays(weekStart,7); if(!editingId) setDefaultDate(); render(); };
+  $("mPrev").onclick = function(){ month.m--; if(month.m<0){month.m=11; month.y--;} renderMonth(); };
+  $("mNext").onclick = function(){ month.m++; if(month.m>11){month.m=0; month.y++;} renderMonth(); };
+
+  ["start","end","pause","rate"].forEach(function(id){ F[id].addEventListener("input", updatePreview); });
+  F.pause.addEventListener("input", persist);
+  F.rate.addEventListener("input", function(){ persist(); render(); renderMonth(); });
+
+  $("save").onclick = function(){
+    var v = formVals(), err = $("error");
+    if(!v.date||!v.start||!v.end){ err.textContent="Bitte Datum, Beginn und Ende ausfüllen."; return; }
+    if(v.start===v.end){ err.textContent="Beginn und Ende sind gleich."; return; }
+    err.textContent = "";
+    var data = {date:v.date, start:v.start, end:v.end, pause:+v.pause||0, rate:curRate(), note:v.note.trim().slice(0,80)};
+    if(editingId){
+      entries = entries.map(function(e){
+        return e.id===editingId ? {id:e.id, date:data.date, start:data.start, end:data.end, pause:data.pause, rate:data.rate, note:data.note} : e;
+      });
+      weekStart = mondayOf(parseIso(v.date));
+      endEdit();
+    } else {
+      data.id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      entries.push(data);
+      weekStart = mondayOf(parseIso(v.date));
+      F.note.value = "";
+    }
+    persist(); render(); renderMonth(); updatePreview();
+  };
+  $("cancel").onclick = function(){ endEdit(); persist(); };
+
+  $("days").addEventListener("click", function(ev){
+    var b = ev.target.closest("button"); if(!b) return;
+    var id = b.getAttribute("data-id");
+    if(b.classList.contains("edit")){ startEdit(id); return; }
+    if(b.classList.contains("del")){
+      if(b.getAttribute("data-armed")){
+        if(editingId===id) endEdit();
+        entries = entries.filter(function(e){return e.id!==id;});
+        persist(); render(); renderMonth();
+      } else {
+        b.setAttribute("data-armed","1"); b.textContent = "Löschen?"; b.classList.add("armed");
+        setTimeout(function(){
+          if(b.isConnected){ b.removeAttribute("data-armed"); b.textContent = "\u2715"; b.classList.remove("armed"); }
+        }, 3000);
+      }
+    }
+  });
+
+  /* Sicherung */
+  function bkMsg(t, bad){ var el=$("bkMsg"); el.textContent=t; el.style.color = bad ? "var(--danger)" : "var(--ink)"; }
+  function fallbackCopy(t){
+    try{ var ta=$("bk"); ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); return document.execCommand("copy"); }
+    catch(e){ return false; }
+  }
+  function copyText(t){
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        return navigator.clipboard.writeText(t).then(function(){return true;}, function(){return fallbackCopy(t);});
+      }
+    }catch(e){}
+    return Promise.resolve(fallbackCopy(t));
+  }
+  function makeBackup(){
+    var b = base();
+    var t = JSON.stringify({app:"arbeitszeiten", version:1, created:iso(new Date()), entries:entries, pause:b.pause, rate:b.rate});
+    $("bk").value = t;
+    return t;
+  }
+  $("bkMake").onclick = function(){
+    var t = makeBackup();
+    copyText(t).then(function(ok){
+      bkMsg(ok ? "Sicherung erstellt und kopiert. Jetzt in WhatsApp, E-Mail oder Notizen einfügen."
+               : "Sicherung erstellt. Tippe ins Feld, markiere alles und kopiere es.", false);
+    });
+  };
+  $("bkCopy").onclick = function(){
+    var t = $("bk").value;
+    if(!t){ t = makeBackup(); }
+    copyText(t).then(function(ok){
+      bkMsg(ok ? "Kopiert." : "Kopieren nicht möglich. Tippe ins Feld, markiere alles und kopiere es.", !ok);
+    });
+  };
+  function validEntry(e){
+    return e && typeof e.id==="string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date||"") &&
+      /^\d{2}:\d{2}$/.test(e.start||"") && /^\d{2}:\d{2}$/.test(e.end||"");
+  }
+  $("bkLoad").onclick = function(){
+    var txt = $("bk").value.trim();
+    if(!txt){ bkMsg("Bitte zuerst den Sicherungstext einfügen oder eine Datei wählen.", true); return; }
+    var data;
+    try{ data = JSON.parse(txt); }catch(e){ bkMsg("Der Text ist keine gültige Sicherung.", true); return; }
+    var list = Array.isArray(data) ? data : (data && data.entries);
+    if(!Array.isArray(list)){ bkMsg("In dem Text sind keine Einträge gefunden worden.", true); return; }
+    var have = {}; entries.forEach(function(e){ have[e.id] = 1; });
+    var added = 0, skipped = 0;
+    list.forEach(function(e){
+      if(!validEntry(e)) return;
+      if(have[e.id]){ skipped++; return; }
+      entries.push({id:e.id, date:e.date, start:e.start, end:e.end, pause:+e.pause||0, rate:+e.rate||0, note:String(e.note||"").slice(0,80)});
+      have[e.id] = 1; added++;
+    });
+    persist(); render(); renderMonth();
+    bkMsg(added+" Einträge hinzugefügt, "+skipped+" waren schon vorhanden.", false);
+  };
+  $("bkFile").addEventListener("change", function(){
+    var f = this.files && this.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){ $("bk").value = String(r.result||""); bkMsg("Datei geladen. Tippe jetzt auf Sicherung einlesen.", false); };
+    r.onerror = function(){ bkMsg("Die Datei konnte nicht gelesen werden.", true); };
+    r.readAsText(f);
+    this.value = "";
+  });
+
+  load(); setDefaultDate(); updatePreview(); render(); renderMonth();
+})();
+</script>
+</body>
+</html>
